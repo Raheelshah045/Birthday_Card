@@ -1105,11 +1105,29 @@ function populateGift(){
 
   const collage = document.getElementById('collage');
   collage.innerHTML = ""; // clear in case of re-render
+
+  // Each card has a unique teasing message to make her tap 🥰
+  const surprises = [
+    { icon: "🤭", text: "There's a memory hiding here..." },
+    { icon: "💌", text: "This one will make you smile" },
+    { icon: "🫣", text: "Close your eyes... now tap!" },
+    { icon: "🌸", text: "A little moment just for you" },
+    { icon: "😍", text: "Who is the most beautiful? Tap to find out!" },
+    { icon: "🥹", text: "You might just fall in love again" },
+    { icon: "🌕", text: "Something worth a thousand words..." },
+    { icon: "💫", text: "Even photos can't do you justice" },
+    { icon: "🫀", text: "This one lives in my heart" },
+    { icon: "🤩", text: "Warning: too beautiful to handle" },
+    { icon: "🎀", text: "A surprise wrapped just for you" },
+    { icon: "🌺", text: "My favourite kind of view..." },
+    { icon: "♥️", text: "The girl I always dreamed of" }
+  ];
+
   CONTENT.photos.forEach((photo, index) => {
     const card = document.createElement('div');
     card.className = 'polaroid';
+    const s = surprises[index % surprises.length];
 
-    // Build the flip-card structure
     card.innerHTML = `
       <div class="polaroid-inner" id="polaroid-inner-${index}">
         <div class="polaroid-front">
@@ -1117,24 +1135,18 @@ function populateGift(){
           <span>${photo.caption}</span>
         </div>
         <div class="polaroid-back">
-          <div class="back-icon">🎁</div>
-          <div class="back-text">Tap to reveal!</div>
+          <div class="back-icon">${s.icon}</div>
+          <div class="back-text">${s.text}</div>
         </div>
       </div>`;
 
-    // Tap/click to flip manually
+    // She must tap to reveal each photo — no auto-flip
     card.addEventListener('click', () => {
       const inner = card.querySelector('.polaroid-inner');
       inner.classList.toggle('flipped');
     });
 
     collage.appendChild(card);
-
-    // Staggered auto-flip — each card flips in sequence after a delay
-    setTimeout(() => {
-      const inner = document.getElementById(`polaroid-inner-${index}`);
-      if (inner) inner.classList.add('flipped');
-    }, 600 + index * 350); // 350ms between each card flip
   });
 }
 
