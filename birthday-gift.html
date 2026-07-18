@@ -900,6 +900,10 @@ function renderDots(){
 function checkCode(){
   if (entered === CONTENT.passcode){
     hintEl.textContent = "";
+    // Auto-start the Happy Birthday music as a surprise
+    setTimeout(() => {
+      if (!musicPlaying) toggleMusic();
+    }, 500);
     goTo('decision');
   } else {
     hintEl.textContent = "That's not quite it — try again";
