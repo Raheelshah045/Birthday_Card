@@ -252,7 +252,8 @@ html,body{
   width:100%;
   height: 62vw;
   max-height: 320px;
-  object-fit: cover;
+  object-fit: contain;
+  background-color: var(--blush);
   display:block;
 }
 .hero-caption{
@@ -377,7 +378,8 @@ html,body{
 .polaroid img{
   width:100%;
   aspect-ratio: 1 / 1;
-  object-fit:cover;
+  object-fit: contain;
+  background-color: var(--cream);
   display:block;
   border-radius: 0.15rem;
 }
@@ -477,7 +479,8 @@ html,body{
   width: 88px;
   height: 88px;
   border-radius:50%;
-  object-fit:cover;
+  object-fit: contain;
+  background-color: var(--blush);
   margin-bottom: 0.85rem;
   box-shadow: 0 6px 16px var(--shadow);
 }
@@ -523,7 +526,8 @@ html,body{
 .photo-strip img{
   width:100%;
   aspect-ratio: 1 / 1;
-  object-fit:cover;
+  object-fit: contain;
+  background-color: var(--blush);
   border-radius: 0.75rem;
   box-shadow: 0 6px 14px var(--shadow);
 }
@@ -710,7 +714,7 @@ html,body{
      (works with 2, 3, 4... any number — grid reflows automatically)
 ================================================================ */
 const CONTENT = {
-  passcode: "1408",
+  passcode: "2307",
 
   heroImage: "birthday_girl.png", // <-- replace with your own image path/URL
   heroCaption: "Happy Birthday",
@@ -999,6 +1003,34 @@ function runGoogleSearch(){
     strip.appendChild(img);
   });
 }
+
+// Dynamic sound synthesis using Web Audio API (cross-browser support)
+function playClickSound() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.08);
+    
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.start();
+    osc.stop(ctx.currentTime + 0.08);
+  } catch (e) {
+    // Ignore browser audio play restriction before interaction
+  }
+}
+
+document.addEventListener('click', playClickSound);
 </script>
 
 </body>
