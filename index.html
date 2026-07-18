@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Mobile-first viewport: locks scaling to portrait phone use, no accidental zoom-drift -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>For You</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Playfair+Display:ital@0;1&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   Palette: dusk-rose (#C97B84), blush (#F4D9DE), warm cream (#FBF3EC),
+   muted plum (#5B3A45) for text, antique gold (#C9A15A) for accents.
+   Signature element: a hand-tied "ribbon lock" on the passcode screen
+   and a taped polaroid collage on the final reveal.
+   ============================================================ */
+:root{
+  --cream:      #FBF3EC;
+  --blush:      #F4D9DE;
+  --rose:       #C97B84;
+  --rose-deep:  #A85D68;
+  --plum:       #5B3A45;
+  --gold:       #C9A15A;
+  --paper:      #FFFDFB;
+  --shadow:     rgba(91, 58, 69, 0.18);
+
+  --font-display: 'Dancing Script', cursive;
+  --font-serif:   'Playfair Display', serif;
+  --font-body:    'Montserrat', sans-serif;
+
+  --touch-min: 44px; /* minimum touch target height, per spec */
+}
+
+*{ box-sizing: border-box; margin:0; padding:0; }
+
+/* Ensure the native `hidden` attribute always wins over any component's
+   own `display` rule (fixes the google-home / google-results both
+   showing at once after search). */
+[hidden]{ display:none !important; }
+
+html,body{
+  height:100%;
+  background: linear-gradient(180deg, var(--cream) 0%, var(--blush) 100%);
+  font-family: var(--font-body);
+  color: var(--plum);
+  -webkit-tap-highlight-color: transparent;
+  overflow-x:hidden;
+}
+
+#app{
+  min-height:100vh;
+  min-height:100dvh; /* modern mobile viewport unit, avoids browser-chrome jump */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding: 1.5rem;
+  position:relative;
+}
+
+.screen{
+  width:100%;
+  max-width: 420px; /* keeps things centered & elegant up to tablet width */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  animation: fadeIn 0.6s ease both;
+}
+.screen[hidden]{ display:none; }
+
+@keyframes fadeIn{
+  from{ opacity:0; transform:translateY(12px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+/* ============================================================
+   SCREEN 1 — PASSCODE / RIBBON LOCK
+   ============================================================ */
+.lock-card{
+  background: var(--paper);
+  border-radius: 1.5rem;
+  padding: 2rem 1.5rem;
+  width:100%;
+  box-shadow: 0 20px 40px var(--shadow);
+  text-align:center;
+  position:relative;
+}
+
+/* signature flourish: a little ribbon "seal" above the card */
+.ribbon-seal{
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: -3.5rem auto 1rem;
+  background: var(--rose);
+  border-radius: 50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 8px 18px var(--shadow);
+  font-size: 1.4rem;
+}
+
+.lock-card h1{
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--rose-deep);
+  margin-bottom: 0.25rem;
+}
+.lock-card p{
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--plum);
+  opacity:0.75;
+  margin-bottom: 1.5rem;
+}
+
+.dots{
+  display:flex;
+  justify-content:center;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+.dot{
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius:50%;
+  border: 1.5px solid var(--rose);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.dot.filled{
+  background: var(--rose);
+  transform: scale(1.1);
+}
+
+.keypad{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.key{
+  min-height: var(--touch-min);
+  aspect-ratio: 1 / 0.8;
+  border:none;
+  border-radius: 0.9rem;
+  background: var(--blush);
+  color: var(--plum);
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-weight:500;
+  cursor:pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.key:active{ transform: scale(0.94); background: var(--rose); color:#fff; }
+.key.zero{ grid-column: 2; }
+.key.clear{
+  background:transparent;
+  color: var(--rose-deep);
+  font-size: 0.85rem;
+  font-weight:600;
+}
+
+/* wrong-code shake */
+.shake{ animation: shake 0.45s ease; }
+@keyframes shake{
+  10%,90% { transform: translateX(-1px); }
+  20%,80% { transform: translateX(3px); }
+  30%,50%,70% { transform: translateX(-7px); }
+  40%,60% { transform: translateX(7px); }
+}
+
+.hint{
+  margin-top: 1.25rem;
+  font-size: 0.7rem;
+  color: var(--rose-deep);
+  opacity:0.8;
+  min-height: 1rem;
+}
+
+/* ============================================================
+   SCREEN 2 — YES / NO DECISION
+   ============================================================ */
+.decision-card{
+  text-align:center;
+  width:100%;
+}
+.decision-card .emoji{ font-size: 2.5rem; margin-bottom: 0.5rem; }
+.decision-card h2{
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  color: var(--rose-deep);
+  margin-bottom: 2.5rem;
+  line-height:1.25;
+}
+
+.choice-zone{
+  position:relative;
+  width:100%;
+  height: 220px; /* room for the "no" button to roam */
+}
+
+.btn{
+  min-height: var(--touch-min);
+  padding: 0 2rem;
+  border-radius: 999px;
+  border:none;
+  font-family: var(--font-body);
+  font-weight:600;
+  font-size: 1rem;
+  cursor:pointer;
+}
+.btn-yes{
+  background: var(--rose);
+  color:#fff;
+  box-shadow: 0 10px 24px var(--shadow);
+  position:absolute;
+  left:50%;
+  top: 40%;
+  transform: translate(-50%,-50%);
+  transition: transform 0.2s ease;
+}
+.btn-yes:active{ transform: translate(-50%,-50%) scale(0.95); }
+
+.btn-no{
+  background: transparent;
+  color: var(--rose-deep);
+  border: 1.5px solid var(--rose);
+  position:absolute;
+  left:50%;
+  top: 68%;
+  transform: translate(-50%,-50%);
+  transition: left 0.25s ease, top 0.25s ease, transform 0.15s ease;
+}
+
+/* ============================================================
+   SCREEN 3 — GIFT REVEAL
+   ============================================================ */
+.gift-screen{ max-width: 480px; padding-bottom: 3rem; }
+
+.hero{
+  width:100%;
+  border-radius: 1.25rem;
+  overflow:hidden;
+  box-shadow: 0 16px 32px var(--shadow);
+  margin-bottom: 1.5rem;
+  position:relative;
+}
+.hero img{
+  width:100%;
+  height: 62vw;
+  max-height: 320px;
+  object-fit: cover;
+  display:block;
+}
+.hero-caption{
+  font-family: var(--font-display);
+  color:#fff;
+  font-size: 1.6rem;
+  position:absolute;
+  bottom: 0.9rem;
+  left: 1.1rem;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+.letter{
+  background: var(--paper);
+  border-radius: 1.25rem;
+  padding: 1.75rem 1.5rem;
+  box-shadow: 0 12px 26px var(--shadow);
+  margin-bottom: 2rem;
+  position: relative;
+}
+.letter::before{ /* little wax-seal dot for texture */
+  content:"";
+  position:absolute;
+  top:-10px; left: 50%;
+  transform: translateX(-50%);
+  width: 20px; height:20px;
+  border-radius:50%;
+  background: var(--gold);
+  box-shadow: 0 4px 10px var(--shadow);
+}
+.letter h3{
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--rose-deep);
+  text-align:center;
+  margin-bottom: 1rem;
+}
+.letter-pages{
+  position:relative;
+  min-height: 220px; /* keeps card height stable as pages swap */
+}
+.letter-page{
+  display:none;
+  animation: fadeIn 0.4s ease both;
+}
+.letter-page.active{ display:block; }
+.letter-page p{
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--plum);
+  white-space: pre-line;
+}
+.letter .sign-off{
+  display:block;
+  margin-top: 1.1rem;
+  text-align:right;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--rose-deep);
+}
+
+.letter-nav{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+.nav-btn{
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border-radius:50%;
+  border: 1.5px solid var(--rose);
+  background: transparent;
+  color: var(--rose-deep);
+  font-size: 1.2rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.nav-btn:active{ background: var(--rose); color:#fff; }
+.nav-btn[disabled]{ opacity: 0.3; pointer-events:none; }
+
+.page-dots{ display:flex; gap: 0.5rem; }
+.page-dots .p-dot{
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius:50%;
+  background: var(--blush);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.page-dots .p-dot.active{
+  background: var(--rose);
+  transform: scale(1.2);
+}
+
+.collage-title{
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--rose-deep);
+  text-align:center;
+  margin-bottom: 1.1rem;
+}
+.collage{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr); /* 2-col on narrow phones */
+  gap: 1rem 0.75rem;
+}
+.polaroid{
+  background:#fff;
+  padding: 0.5rem 0.5rem 1.1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 8px 18px var(--shadow);
+  transform: rotate(var(--tilt, -2deg));
+}
+.polaroid:nth-child(odd){ --tilt: -3deg; }
+.polaroid:nth-child(even){ --tilt: 2.5deg; }
+.polaroid img{
+  width:100%;
+  aspect-ratio: 1 / 1;
+  object-fit:cover;
+  display:block;
+  border-radius: 0.15rem;
+}
+.polaroid span{
+  display:block;
+  text-align:center;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--plum);
+  margin-top: 0.4rem;
+}
+
+.cta-btn{
+  display:block;
+  width:100%;
+  min-height: var(--touch-min);
+  margin-top: 2rem;
+  border:none;
+  border-radius: 999px;
+  background: var(--rose-deep);
+  color:#fff;
+  font-family: var(--font-body);
+  font-weight:600;
+  font-size: 0.95rem;
+  cursor:pointer;
+  box-shadow: 0 10px 22px var(--shadow);
+}
+.cta-btn:active{ transform: scale(0.97); }
+
+/* ============================================================
+   SCREEN 4 — FAKE GOOGLE SEARCH
+   ============================================================ */
+#screen-google{ max-width: 480px; }
+
+.google-home{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top: 3rem;
+}
+.g-logo{
+  font-family: 'Montserrat', sans-serif;
+  font-size: 2.6rem;
+  font-weight:600;
+  margin-bottom: 1.75rem;
+  letter-spacing: -0.01em;
+}
+.g-searchbar{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap: 0.6rem;
+  background:#fff;
+  border: 1px solid #e3e3e3;
+  border-radius: 999px;
+  padding: 0.7rem 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.g-searchbar input{
+  border:none;
+  outline:none;
+  flex:1;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  color: #3c3c3c;
+  background:transparent;
+}
+.g-icon{ font-size:0.95rem; opacity:0.6; }
+
+.g-search-btn{
+  min-height: var(--touch-min);
+  margin-top: 1.75rem;
+  padding: 0 1.5rem;
+  border:none;
+  border-radius: 0.4rem;
+  background: #f1f3f4;
+  color:#3c3c3c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  cursor:pointer;
+}
+.g-search-btn:active{ background:#e8eaed; }
+
+.google-results{ width:100%; }
+.g-searchbar-small{ margin-bottom: 1.75rem; }
+
+.profile-card{
+  background:#fff;
+  border-radius: 1rem;
+  padding: 1.75rem 1.25rem;
+  text-align:center;
+  box-shadow: 0 12px 26px var(--shadow);
+  margin-bottom: 1.75rem;
+}
+.profile-card img{
+  width: 88px;
+  height: 88px;
+  border-radius:50%;
+  object-fit:cover;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 6px 16px var(--shadow);
+}
+.profile-card h2{
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  color: var(--rose-deep);
+}
+.profile-tagline{
+  font-size: 0.85rem;
+  font-weight:600;
+  color: var(--plum);
+  margin-top: 0.2rem;
+}
+.profile-subtitle{
+  font-size: 0.78rem;
+  color: var(--gold);
+  font-weight:600;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  margin-top: 0.15rem;
+}
+.profile-birthdate{
+  font-size: 0.78rem;
+  color: var(--plum);
+  opacity:0.65;
+  margin-top: 0.5rem;
+}
+
+.results-label{
+  font-size: 0.75rem;
+  font-weight:600;
+  color: var(--rose-deep);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-bottom: 0.6rem;
+}
+.photo-strip{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr); /* 9 photos, 3 per row */
+  gap: 0.6rem;
+}
+.photo-strip img{
+  width:100%;
+  aspect-ratio: 1 / 1;
+  object-fit:cover;
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 14px var(--shadow);
+}
+
+/* Confetti layer for the "Yes" celebration */
+#confetti-layer{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+  z-index: 50;
+}
+.confetti-piece{
+  position:absolute;
+  top:-10px;
+  width: 8px; height: 14px;
+  opacity:0.9;
+  animation: fall linear forwards;
+}
+@keyframes fall{
+  to{ transform: translateY(110vh) rotate(540deg); opacity:0.4; }
+}
+
+/* ============================================================
+   MEDIA QUERIES — 320px through 800px
+   ============================================================ */
+@media (max-width: 360px){
+  .lock-card{ padding: 1.5rem 1rem; }
+  .lock-card h1{ font-size: 1.7rem; }
+  .key{ font-size: 1rem; }
+  .decision-card h2{ font-size: 1.7rem; }
+}
+
+@media (min-width: 601px){
+  /* tablets / larger phones: allow a 3-column collage */
+  .collage{ grid-template-columns: repeat(3, 1fr); }
+  .hero img{ height: 340px; }
+}
+
+@media (min-width: 800px){
+  #app{ padding: 3rem 1.5rem; }
+  .screen, .gift-screen{ max-width: 520px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============================================================
+       SCREEN 1: PASSCODE ENTRY
+  ============================================================ -->
+  <section id="screen-lock" class="screen">
+    <div class="lock-card" id="lock-card">
+      <div class="ribbon-seal">💗</div>
+      <h1>A Little Secret</h1>
+      <p>Enter the code to unlock your surprise</p>
+
+      <div class="dots" id="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="keypad" id="keypad">
+        <!-- generated by JS -->
+      </div>
+
+      <div class="hint" id="hint"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN 2: YES / NO DECISION
+  ============================================================ -->
+  <section id="screen-decision" class="screen" hidden>
+    <div class="decision-card">
+      <div class="emoji">🎂</div>
+      <h2>Will you let me<br>spoil you today?</h2>
+      <div class="choice-zone" id="choice-zone">
+        <button class="btn btn-yes" id="btn-yes">Yes, obviously</button>
+        <button class="btn btn-no" id="btn-no">No</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       SCREEN 3: GIFT REVEAL — hero, letter, photo collage
+  ============================================================ -->
+  <section id="screen-gift" class="screen gift-screen" hidden>
+
+    <div class="hero">
+      <!-- IMAGE PATH: swap CONTENT.heroImage in the JS below -->
+      <img id="hero-img" src="" alt="Us">
+      <div class="hero-caption" id="hero-caption"></div>
+    </div>
+
+    <div class="letter">
+      <h3 id="letter-title"></h3>
+
+      <div class="letter-pages" id="letter-pages">
+        <!-- generated by JS from CONTENT.letter.pages -->
+      </div>
+
+      <div class="letter-nav">
+        <button class="nav-btn" id="letter-prev" type="button" aria-label="Previous page">‹</button>
+        <div class="page-dots" id="letter-dots"></div>
+        <button class="nav-btn" id="letter-next" type="button" aria-label="Next page">›</button>
+      </div>
+
+      <span class="sign-off" id="letter-signoff"></span>
+    </div>
+
+    <h3 class="collage-title">Little Moments</h3>
+    <div class="collage" id="collage">
+      <!-- polaroid cards generated by JS from CONTENT.photos -->
+    </div>
+
+    <button class="cta-btn" id="btn-click-me" type="button">One more thing... click me 💌</button>
+
+  </section>
+
+  <!-- ============================================================
+       SCREEN 4: BONUS — fake "Google search" reveal
+  ============================================================ -->
+  <section id="screen-google" class="screen" hidden>
+
+    <!-- 4a. search home -->
+    <div id="google-home" class="google-home">
+      <div class="g-logo">
+        <span style="color:#4285F4">G</span><span style="color:#EA4335">o</span><span style="color:#FBBC05">o</span><span style="color:#4285F4">g</span><span style="color:#34A853">l</span><span style="color:#EA4335">e</span>
+      </div>
+      <div class="g-searchbar">
+        <span class="g-icon">🔍</span>
+        <input type="text" id="g-input" readonly>
+      </div>
+      <button class="g-search-btn" id="g-search-btn" type="button">Google Search</button>
+    </div>
+
+    <!-- 4b. search results (hidden until search is "run") -->
+    <div id="google-results" class="google-results" hidden>
+      <div class="g-searchbar g-searchbar-small">
+        <span class="g-icon">🔍</span>
+        <input type="text" id="g-input-small" readonly>
+      </div>
+
+      <div class="profile-card">
+        <img id="profile-photo" src="" alt="">
+        <h2 id="profile-name"></h2>
+        <p class="profile-tagline" id="profile-tagline"></p>
+        <p class="profile-subtitle" id="profile-subtitle"></p>
+        <p class="profile-birthdate" id="profile-birthdate"></p>
+      </div>
+
+      <p class="results-label">Images</p>
+      <div class="photo-strip" id="photo-strip">
+        <!-- generated by JS from CONTENT.google.searchPhotos -->
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<div id="confetti-layer"></div>
+
+<script>
+/* ================================================================
+   CONTENT DATA
+   Everything you personalize lives here. Edit these values only —
+   you never need to touch the logic below to update text or images.
+
+   - passcode: 4 digits shown as dots on the lock screen
+   - heroImage: full-bleed photo at the top of the reveal screen
+   - heroCaption: short text overlaid on the hero photo
+   - letter: title / body / sign-off for the "wish" note
+     (use \n inside the body string for line breaks / paragraphs)
+   - photos: array of { src, caption } for the polaroid collage
+     (works with 2, 3, 4... any number — grid reflows automatically)
+================================================================ */
+const CONTENT = {
+  passcode: "1408",
+
+  heroImage: "birthday_girl.png", // <-- replace with your own image path/URL
+  heroCaption: "Happy Birthday",
+
+  letter: {
+    title: "My Wish For You",
+    // Split across pages so the card stays readable on small screens.
+    // Add or remove page strings freely — navigation adapts automatically.
+    pages: [
+`Happy birthday to my favorite person 🌸
+
+Another year of you being exactly who you are — kind, sharp, and quietly unstoppable. I hope today feels as good as you make everyone around you feel.`,
+
+`Here's to everything still ahead — the goals you're chasing, the plans we haven't even said out loud yet, and every ordinary day in between.
+
+I'm just glad I get to watch it happen up close. Happy birthday, love ♥️`
+    ],
+    signOff: "— always yours"
+  },
+
+  photos: [
+    { src: "img1.jpeg", caption: "gorgeous ✨" },
+    { src: "img2.jpeg", caption: "that smile 😊" },
+    { src: "img3.jpeg", caption: "stunning ♥️" },
+    { src: "img4.jpeg", caption: "shining bright 🌟" },
+    { src: "img5.jpeg", caption: "beautiful moments 🌸" },
+    { src: "img6.jpeg", caption: "simply the best 💫" }
+  ],
+
+  // ------------------------------------------------------------
+  // GOOGLE SEARCH PAGE — the "click me" bonus screen.
+  // query: pre-filled search text shown on the fake search bar
+  // profile: the knowledge-panel card shown after "searching"
+  // searchPhotos: the horizontal scroll strip (10 photos suggested)
+  // ------------------------------------------------------------
+  google: {
+    query: "The most beautiful girl in the world",
+    profile: {
+      name: "Saba Noor",
+      tagline: "Future Business Woman",
+      subtitle: "Birthday Girl",
+      birthdate: "Born · July 23",
+      photo: "birthday_girl.png" // <-- replace with her photo
+    },
+    searchPhotos: [
+      "img2.jpeg",
+      "img3.jpeg",
+      "img4.jpeg",
+      "img5.jpeg",
+      "img6.jpeg",
+      "img7.jpeg",
+      "img8.jpeg",
+      "img9.jpeg",
+      "img10.jpeg"
+    ]
+  }
+};
+
+/* ================================================================
+   STATE MACHINE — screen switching
+================================================================ */
+const screens = {
+  lock: document.getElementById('screen-lock'),
+  decision: document.getElementById('screen-decision'),
+  gift: document.getElementById('screen-gift'),
+  google: document.getElementById('screen-google')
+};
+
+function goTo(name){
+  Object.values(screens).forEach(s => s.hidden = true);
+  screens[name].hidden = false;
+}
+
+/* ================================================================
+   SCREEN 1 — PASSCODE LOGIC
+================================================================ */
+const keypad = document.getElementById('keypad');
+const dotsEl = document.getElementById('dots');
+const lockCard = document.getElementById('lock-card');
+const hintEl = document.getElementById('hint');
+let entered = "";
+
+// Build the numeric keypad 1-9, clear, 0
+function buildKeypad(){
+  const layout = ["1","2","3","4","5","6","7","8","9","clear","0","back"];
+  layout.forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'key';
+    if (key === '0') btn.classList.add('zero');
+    if (key === 'clear' || key === 'back') btn.classList.add('clear');
+
+    btn.textContent = key === 'clear' ? 'Clear' : key === 'back' ? '⌫' : key;
+    btn.type = 'button';
+    btn.addEventListener('click', () => handleKey(key));
+    keypad.appendChild(btn);
+  });
+}
+
+function handleKey(key){
+  if (key === 'clear'){ entered = ""; renderDots(); return; }
+  if (key === 'back'){ entered = entered.slice(0, -1); renderDots(); return; }
+  if (entered.length >= 4) return;
+
+  entered += key;
+  renderDots();
+
+  if (entered.length === 4){
+    setTimeout(checkCode, 150); // brief pause so the last dot is visible
+  }
+}
+
+function renderDots(){
+  const dots = dotsEl.querySelectorAll('.dot');
+  dots.forEach((d, i) => d.classList.toggle('filled', i < entered.length));
+}
+
+function checkCode(){
+  if (entered === CONTENT.passcode){
+    hintEl.textContent = "";
+    goTo('decision');
+  } else {
+    hintEl.textContent = "That's not quite it — try again";
+    lockCard.classList.add('shake');
+    setTimeout(() => lockCard.classList.remove('shake'), 450);
+    entered = "";
+    renderDots();
+  }
+}
+
+buildKeypad();
+
+/* ================================================================
+   SCREEN 2 — YES / NO LOGIC
+================================================================ */
+const btnYes = document.getElementById('btn-yes');
+const btnNo = document.getElementById('btn-no');
+const choiceZone = document.getElementById('choice-zone');
+
+function dodgeNoButton(){
+  const zoneRect = choiceZone.getBoundingClientRect();
+  const btnRect = btnNo.getBoundingClientRect();
+
+  const maxLeft = Math.max(zoneRect.width - btnRect.width, 40);
+  const maxTop  = Math.max(zoneRect.height - btnRect.height, 40);
+
+  const newLeft = Math.random() * maxLeft + btnRect.width / 2;
+  const newTop  = Math.random() * maxTop + btnRect.height / 2;
+
+  btnNo.style.left = newLeft + 'px';
+  btnNo.style.top  = newTop + 'px';
+}
+
+// Moves away on hover (desktop) and on touch/click attempt (mobile)
+btnNo.addEventListener('mouseenter', dodgeNoButton);
+btnNo.addEventListener('touchstart', (e) => { e.preventDefault(); dodgeNoButton(); }, { passive:false });
+btnNo.addEventListener('click', (e) => { e.preventDefault(); dodgeNoButton(); });
+
+btnYes.addEventListener('click', () => {
+  launchConfetti();
+  btnYes.style.transform = 'translate(-50%,-50%) scale(1.15)';
+  setTimeout(() => {
+    populateGift();
+    goTo('gift');
+  }, 700);
+});
+
+/* ================================================================
+   CONFETTI — lightweight CSS-driven celebration
+================================================================ */
+function launchConfetti(){
+  const layer = document.getElementById('confetti-layer');
+  const colors = ['#C97B84', '#F4D9DE', '#C9A15A', '#FBF3EC', '#A85D68'];
+
+  for (let i = 0; i < 60; i++){
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+    piece.style.animationDelay = (Math.random() * 0.3) + 's';
+    layer.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+/* ================================================================
+   LETTER PAGINATION — splits CONTENT.letter.pages into swipeable pages
+================================================================ */
+let letterPageIndex = 0;
+
+function buildLetterPages(){
+  const wrap = document.getElementById('letter-pages');
+  const dotsWrap = document.getElementById('letter-dots');
+  wrap.innerHTML = "";
+  dotsWrap.innerHTML = "";
+
+  CONTENT.letter.pages.forEach((text, i) => {
+    const page = document.createElement('div');
+    page.className = 'letter-page';
+    page.innerHTML = `<p>${text}</p>`;
+    wrap.appendChild(page);
+
+    const dot = document.createElement('div');
+    dot.className = 'p-dot';
+    dotsWrap.appendChild(dot);
+  });
+
+  letterPageIndex = 0;
+  renderLetterPage();
+}
+
+function renderLetterPage(){
+  const pages = document.querySelectorAll('.letter-page');
+  const dots = document.querySelectorAll('.p-dot');
+
+  pages.forEach((p, i) => p.classList.toggle('active', i === letterPageIndex));
+  dots.forEach((d, i) => d.classList.toggle('active', i === letterPageIndex));
+
+  document.getElementById('letter-prev').disabled = letterPageIndex === 0;
+  document.getElementById('letter-next').disabled = letterPageIndex === CONTENT.letter.pages.length - 1;
+
+  // sign-off only shows on the final page
+  document.getElementById('letter-signoff').style.display =
+    (letterPageIndex === CONTENT.letter.pages.length - 1) ? 'block' : 'none';
+}
+
+document.getElementById('letter-prev').addEventListener('click', () => {
+  if (letterPageIndex > 0){ letterPageIndex--; renderLetterPage(); }
+});
+document.getElementById('letter-next').addEventListener('click', () => {
+  if (letterPageIndex < CONTENT.letter.pages.length - 1){ letterPageIndex++; renderLetterPage(); }
+});
+
+/* ================================================================
+   SCREEN 3 — POPULATE GIFT CONTENT FROM CONTENT DATA
+================================================================ */
+function populateGift(){
+  document.getElementById('hero-img').src = CONTENT.heroImage;
+  document.getElementById('hero-caption').textContent = CONTENT.heroCaption;
+
+  document.getElementById('letter-title').textContent = CONTENT.letter.title;
+  document.getElementById('letter-signoff').textContent = CONTENT.letter.signOff;
+  buildLetterPages();
+
+  const collage = document.getElementById('collage');
+  collage.innerHTML = ""; // clear in case of re-render
+  CONTENT.photos.forEach(photo => {
+    const card = document.createElement('div');
+    card.className = 'polaroid';
+    card.innerHTML = `<img src="${photo.src}" alt="${photo.caption}"><span>${photo.caption}</span>`;
+    collage.appendChild(card);
+  });
+}
+
+/* ================================================================
+   SCREEN 4 — BONUS "GOOGLE SEARCH" REVEAL
+================================================================ */
+document.getElementById('btn-click-me').addEventListener('click', () => {
+  // reset to the search-home state each time it's opened
+  document.getElementById('google-home').hidden = false;
+  document.getElementById('google-results').hidden = true;
+  document.getElementById('g-input').value = CONTENT.google.query;
+  goTo('google');
+});
+
+document.getElementById('g-search-btn').addEventListener('click', runGoogleSearch);
+
+function runGoogleSearch(){
+  document.getElementById('google-home').hidden = true;
+  document.getElementById('google-results').hidden = false;
+  document.getElementById('g-input-small').value = CONTENT.google.query;
+
+  const p = CONTENT.google.profile;
+  document.getElementById('profile-photo').src = p.photo;
+  document.getElementById('profile-name').textContent = p.name;
+  document.getElementById('profile-tagline').textContent = p.tagline;
+  document.getElementById('profile-subtitle').textContent = p.subtitle;
+  document.getElementById('profile-birthdate').textContent = p.birthdate;
+
+  const strip = document.getElementById('photo-strip');
+  strip.innerHTML = "";
+  CONTENT.google.searchPhotos.forEach(src => {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = p.name;
+    strip.appendChild(img);
+  });
+}
+</script>
+
+</body>
+</html>
