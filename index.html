@@ -251,9 +251,9 @@ html,body{
 .hero img{
   width:100%;
   height: 62vw;
-  max-height: 320px;
-  object-fit: contain;
-  background-color: var(--blush);
+  max-height: 360px;
+  object-fit: cover;
+  object-position: center 20%;
   display:block;
 }
 .hero-caption{
@@ -377,9 +377,9 @@ html,body{
 .polaroid:nth-child(even){ --tilt: 2.5deg; }
 .polaroid img{
   width:100%;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background-color: var(--cream);
+  aspect-ratio: 3 / 4; /* Portrait ratio prevents vertical crop */
+  object-fit: cover;
+  object-position: center 20%;
   display:block;
   border-radius: 0.15rem;
 }
@@ -476,11 +476,11 @@ html,body{
   margin-bottom: 1.75rem;
 }
 .profile-card img{
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
   border-radius:50%;
-  object-fit: contain;
-  background-color: var(--blush);
+  object-fit: cover;
+  object-position: center 20%;
   margin-bottom: 0.85rem;
   box-shadow: 0 6px 16px var(--shadow);
 }
@@ -525,9 +525,9 @@ html,body{
 }
 .photo-strip img{
   width:100%;
-  aspect-ratio: 1 / 1;
-  object-fit: contain;
-  background-color: var(--blush);
+  aspect-ratio: 3 / 4; /* Portrait ratio for a human face */
+  object-fit: cover;
+  object-position: center 20%;
   border-radius: 0.75rem;
   box-shadow: 0 6px 14px var(--shadow);
 }
@@ -575,9 +575,45 @@ html,body{
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Floating Music Toggle Button */
+.music-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.5px solid var(--rose);
+  color: var(--rose-deep);
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px var(--shadow);
+  z-index: 100;
+  transition: transform 0.2s, background-color 0.2s, color 0.2s;
+}
+.music-toggle:active {
+  transform: scale(0.9);
+}
+.music-toggle.playing {
+  background: var(--rose);
+  color: #fff;
+  animation: pulse-music 1.5s infinite;
+}
+@keyframes pulse-music {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 </style>
 </head>
 <body>
+
+<button id="music-toggle" class="music-toggle" type="button" aria-label="Toggle music">🎵</button>
 
 <div id="app">
 
@@ -972,12 +1008,35 @@ function populateGift(){
 /* ================================================================
    SCREEN 4 — BONUS "GOOGLE SEARCH" REVEAL
 ================================================================ */
+let typingTimer = null;
 document.getElementById('btn-click-me').addEventListener('click', () => {
-  // reset to the search-home state each time it's opened
   document.getElementById('google-home').hidden = false;
   document.getElementById('google-results').hidden = true;
-  document.getElementById('g-input').value = CONTENT.google.query;
+  const input = document.getElementById('g-input');
+  input.value = "";
   goTo('google');
+  
+  // Disable search button during typing to prevent premature clicks
+  const searchBtn = document.getElementById('g-search-btn');
+  searchBtn.disabled = true;
+  
+  // Start auto-typing
+  const query = CONTENT.google.query;
+  let charIndex = 0;
+  
+  if (typingTimer) clearInterval(typingTimer);
+  
+  typingTimer = setInterval(() => {
+    if (charIndex < query.length) {
+      input.value += query[charIndex];
+      charIndex++;
+    } else {
+      clearInterval(typingTimer);
+      searchBtn.disabled = false;
+      // Auto search after 800ms to surprise the user
+      setTimeout(runGoogleSearch, 800);
+    }
+  }, 90 + Math.random() * 40); // natural typing human behavior
 });
 
 document.getElementById('g-search-btn').addEventListener('click', runGoogleSearch);
@@ -1005,7 +1064,10 @@ function runGoogleSearch(){
 }
 
 // Dynamic sound synthesis using Web Audio API (cross-browser support)
-function playClickSound() {
+function playClickSound(e) {
+  // If clicking music toggle, don't trigger dual clicks
+  if (e && e.target && e.target.id === 'music-toggle') return;
+  
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
@@ -1017,7 +1079,7 @@ function playClickSound() {
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.08);
     
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.setValueAtTime(0.04, ctx.currentTime); // keep click sound subtle
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
     
     osc.connect(gain);
@@ -1025,12 +1087,100 @@ function playClickSound() {
     
     osc.start();
     osc.stop(ctx.currentTime + 0.08);
-  } catch (e) {
+  } catch (err) {
     // Ignore browser audio play restriction before interaction
   }
 }
 
 document.addEventListener('click', playClickSound);
+
+// ================================================================
+// MUSIC BOX SYNTHESIZER — Happy Birthday Melody
+// ================================================================
+const NOTES = {
+  'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+  'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 'A5': 880.00, 'B5': 987.77
+};
+
+const MELODY = [
+  { note: 'C4', dur: 0.75 }, { note: 'C4', dur: 0.25 }, { note: 'D4', dur: 1 }, { note: 'C4', dur: 1 }, { note: 'F4', dur: 1 }, { note: 'E4', dur: 2 },
+  { note: 'C4', dur: 0.75 }, { note: 'C4', dur: 0.25 }, { note: 'D4', dur: 1 }, { note: 'C4', dur: 1 }, { note: 'G4', dur: 1 }, { note: 'F4', dur: 2 },
+  { note: 'C4', dur: 0.75 }, { note: 'C4', dur: 0.25 }, { note: 'C5', dur: 1 }, { note: 'A4', dur: 1 }, { note: 'F4', dur: 1 }, { note: 'E4', dur: 1 }, { note: 'D4', dur: 2 },
+  { note: 'A#4', dur: 0.75 }, { note: 'A#4', dur: 0.25 }, { note: 'A4', dur: 1 }, { note: 'F4', dur: 1 }, { note: 'G4', dur: 1 }, { note: 'F4', dur: 2 }
+];
+
+let audioCtx = null;
+let musicPlaying = false;
+let melodyTimeout = null;
+let currentNoteIndex = 0;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playMusicBoxNote(freq, time, duration) {
+  if (!audioCtx) return;
+  
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(freq, time);
+  
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(freq * 2, time); // 1 octave higher for music box pluck
+  
+  gainNode.gain.setValueAtTime(0.12, time);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + duration * 1.8);
+  
+  osc1.connect(gainNode);
+  osc2.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  osc1.start(time);
+  osc1.stop(time + duration * 1.8);
+  osc2.start(time);
+  osc2.stop(time + duration * 1.8);
+}
+
+function playMelodyLoop() {
+  if (!musicPlaying) return;
+  
+  initAudio();
+  const tempo = 125; // BPM
+  const beatDuration = 60 / tempo;
+  const currentNote = MELODY[currentNoteIndex];
+  const freq = NOTES[currentNote.note];
+  const dur = currentNote.dur * beatDuration;
+  
+  playMusicBoxNote(freq, audioCtx.currentTime, dur);
+  
+  currentNoteIndex = (currentNoteIndex + 1) % MELODY.length;
+  melodyTimeout = setTimeout(playMelodyLoop, dur * 1000);
+}
+
+function toggleMusic() {
+  const btn = document.getElementById('music-toggle');
+  initAudio();
+  if (musicPlaying) {
+    musicPlaying = false;
+    clearTimeout(melodyTimeout);
+    btn.classList.remove('playing');
+  } else {
+    musicPlaying = true;
+    currentNoteIndex = 0;
+    btn.classList.add('playing');
+    playMelodyLoop();
+  }
+}
+
+document.getElementById('music-toggle').addEventListener('click', toggleMusic);
 </script>
 
 </body>
