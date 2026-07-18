@@ -361,35 +361,101 @@ html,body{
   text-align:center;
   margin-bottom: 1.1rem;
 }
+
+/* ============================================================
+   POLAROID FLIP-REVEAL SURPRISE
+   Each card starts face-down and flips over with a staggered
+   3D animation when the gift screen is revealed.
+   ============================================================ */
 .collage{
   display:grid;
-  grid-template-columns: repeat(2, 1fr); /* 2-col on narrow phones */
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem 0.75rem;
 }
+
+/* Outer wrapper — preserves 3D perspective */
 .polaroid{
-  background:#fff;
-  padding: 0.5rem 0.5rem 1.1rem;
+  perspective: 800px;
+  cursor: pointer;
+}
+
+/* The rotating inner card */
+.polaroid-inner{
+  position: relative;
+  width: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(180deg); /* starts face-down */
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.25rem;
+}
+
+/* When flipped class is added, card turns face-up */
+.polaroid-inner.flipped{
+  transform: rotateY(0deg);
+}
+
+/* Both faces share the same visual shell */
+.polaroid-front,
+.polaroid-back{
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   border-radius: 0.25rem;
   box-shadow: 0 8px 18px var(--shadow);
-  transform: rotate(var(--tilt, -2deg));
 }
-.polaroid:nth-child(odd){ --tilt: -3deg; }
-.polaroid:nth-child(even){ --tilt: 2.5deg; }
-.polaroid img{
-  width:100%;
-  aspect-ratio: 3 / 4; /* Portrait ratio prevents vertical crop */
+
+/* FRONT — the actual polaroid photo */
+.polaroid-front{
+  background: #fff;
+  padding: 0.5rem 0.5rem 1.1rem;
+  transform: rotateY(0deg);
+}
+.polaroid:nth-child(odd) .polaroid-front  { transform: rotateY(0deg) rotate(-3deg); }
+.polaroid:nth-child(even) .polaroid-front { transform: rotateY(0deg) rotate(2.5deg); }
+
+.polaroid-front img{
+  width: 100%;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   object-position: center 20%;
-  display:block;
+  display: block;
   border-radius: 0.15rem;
 }
-.polaroid span{
-  display:block;
-  text-align:center;
+.polaroid-front span{
+  display: block;
+  text-align: center;
   font-family: var(--font-display);
   font-size: 1rem;
   color: var(--plum);
   margin-top: 0.4rem;
+}
+
+/* BACK — mystery side shown before reveal */
+.polaroid-back{
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--rose) 0%, var(--rose-deep) 100%);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem;
+}
+.polaroid-back .back-icon{
+  font-size: 2.2rem;
+  animation: pulse-icon 1.5s infinite ease-in-out;
+}
+.polaroid-back .back-text{
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: #fff;
+  text-align: center;
+  opacity: 0.9;
+}
+@keyframes pulse-icon{
+  0%,100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
 }
 
 .cta-btn{
@@ -802,12 +868,19 @@ The climb will be steep, but we will climb it together. I will always be your an
   },
 
   photos: [
-    { src: "img1.jpeg", caption: "gorgeous ✨" },
-    { src: "img2.jpeg", caption: "that smile 😊" },
-    { src: "img3.jpeg", caption: "stunning ♥️" },
-    { src: "img4.jpeg", caption: "shining bright 🌟" },
-    { src: "img5.jpeg", caption: "beautiful moments 🌸" },
-    { src: "img6.jpeg", caption: "simply the best 💫" }
+    { src: "img1.jpeg",  caption: "gorgeous ✨" },
+    { src: "img2.jpeg",  caption: "that smile 😊" },
+    { src: "img3.jpeg",  caption: "stunning ♥️" },
+    { src: "img4.jpeg",  caption: "shining bright 🌟" },
+    { src: "img5.jpeg",  caption: "beautiful moments 🌸" },
+    { src: "img6.jpeg",  caption: "simply the best 💫" },
+    { src: "img11.jpeg", caption: "my whole world 🌍" },
+    { src: "img12.jpeg", caption: "so precious 🥹" },
+    { src: "img13.jpeg", caption: "always glowing 🌕" },
+    { src: "img14.jpeg", caption: "forever mine ♥️" },
+    { src: "img15.jpeg", caption: "my pride 🙌🏻" },
+    { src: "img16.jpeg", caption: "queen energy 👑" },
+    { src: "img17.jpeg", caption: "my begum 🫂" }
   ],
 
   // ------------------------------------------------------------
@@ -830,11 +903,12 @@ The climb will be steep, but we will climb it together. I will always be your an
       "img3.jpeg",
       "img4.jpeg",
       "img5.jpeg",
-      "img6.jpeg",
-      "img7.jpeg",
-      "img8.jpeg",
-      "img9.jpeg",
-      "img10.jpeg"
+      "img11.jpeg",
+      "img12.jpeg",
+      "img13.jpeg",
+      "img14.jpeg",
+      "img15.jpeg",
+      "img16.jpeg"
     ]
   }
 };
@@ -1031,11 +1105,36 @@ function populateGift(){
 
   const collage = document.getElementById('collage');
   collage.innerHTML = ""; // clear in case of re-render
-  CONTENT.photos.forEach(photo => {
+  CONTENT.photos.forEach((photo, index) => {
     const card = document.createElement('div');
     card.className = 'polaroid';
-    card.innerHTML = `<img src="${photo.src}" alt="${photo.caption}"><span>${photo.caption}</span>`;
+
+    // Build the flip-card structure
+    card.innerHTML = `
+      <div class="polaroid-inner" id="polaroid-inner-${index}">
+        <div class="polaroid-front">
+          <img src="${photo.src}" alt="${photo.caption}" loading="lazy">
+          <span>${photo.caption}</span>
+        </div>
+        <div class="polaroid-back">
+          <div class="back-icon">🎁</div>
+          <div class="back-text">Tap to reveal!</div>
+        </div>
+      </div>`;
+
+    // Tap/click to flip manually
+    card.addEventListener('click', () => {
+      const inner = card.querySelector('.polaroid-inner');
+      inner.classList.toggle('flipped');
+    });
+
     collage.appendChild(card);
+
+    // Staggered auto-flip — each card flips in sequence after a delay
+    setTimeout(() => {
+      const inner = document.getElementById(`polaroid-inner-${index}`);
+      if (inner) inner.classList.add('flipped');
+    }, 600 + index * 350); // 350ms between each card flip
   });
 }
 
